@@ -1,0 +1,649 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>나의 맛집 도감</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Noto+Sans+KR:wght@400;500;700&display=swap">
+<style>
+/* Layout: 헤더 → 큰 검색창 + 키워드 칩 → 결과 카드. 키워드 하나로 시작해 관련 키워드로 좁혀 가는 흐름. */
+:root {
+  --bg: #F2F4F1;
+  --surface: #FFFFFF;
+  --fg: #18211D;
+  --muted: #55645D;
+  --line: #D1D9D4;
+  --soft: #E7ECE8;
+  --accent: #D43A1F;
+  --accent-fg: #FFFFFF;
+  --pine: #1F6B58;
+  --pine-soft: #DDEEE8;
+  --star: #D98A00;
+  --c1: #B4472A; --c2: #2F5F9E; --c3: #A8821C; --c4: #6B4F9E;
+  --c5: #C2528B; --c6: #6F5A3E; --c7: #1F6B58; --c8: #55645D;
+  --font-display: "Black Han Sans", "Noto Sans KR", sans-serif;
+  --font-body: "Noto Sans KR", system-ui, -apple-system, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #121715; --surface: #1B2320; --fg: #EAF0EC; --muted: #A3B1A9;
+    --line: #2C3833; --soft: #232D29; --accent: #FF6B4A; --accent-fg: #1A0B07;
+    --pine: #5FBFA3; --pine-soft: #1D3029; --star: #F2B63D;
+    --c1: #E8805F; --c2: #7FA6DB; --c3: #D8B54E; --c4: #A98FD6;
+    --c5: #E58BB8; --c6: #BFA27A; --c7: #5FBFA3; --c8: #A3B1A9;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #121715; --surface: #1B2320; --fg: #EAF0EC; --muted: #A3B1A9;
+  --line: #2C3833; --soft: #232D29; --accent: #FF6B4A; --accent-fg: #1A0B07;
+  --pine: #5FBFA3; --pine-soft: #1D3029; --star: #F2B63D;
+  --c1: #E8805F; --c2: #7FA6DB; --c3: #D8B54E; --c4: #A98FD6;
+  --c5: #E58BB8; --c6: #BFA27A; --c7: #5FBFA3; --c8: #A3B1A9;
+  color-scheme: dark;
+}
+/* 쉬운 화면: 큰 글씨, 큰 버튼, 꼭 필요한 것만 */
+html.easy { font-size: 21px; --muted: #36423C; }
+html.easy .stats, html.easy details.more, html.easy .tags { display: none; }
+html.easy .btn { min-height: 52px; }
+html.easy .btn.small { min-height: 48px; font-size: 1rem; padding: 8px 16px; }
+html.easy .chip { min-height: 50px; }
+html.easy .name { font-size: 1.4rem; }
+html.easy .memo { color: var(--fg); }
+html.easy .sbox input { font-size: 1.3rem; padding: 16px; }
+.quick { display: flex; flex-direction: column; gap: 14px; padding-bottom: 14px; border-bottom: 1px solid var(--line); }
+.qrow { display: flex; flex-direction: column; gap: 8px; }
+.qlab { font-weight: 700; font-size: 1rem; }
+.qbtn { min-height: 46px; padding: 8px 16px; font-size: 1rem; border-width: 2px; }
+.brow { display: flex; gap: 8px; flex-wrap: wrap; }
+.phone { font-weight: 700; color: var(--fg); margin: 0; }
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--fg);
+  font-family: var(--font-body); font-size: 0.95rem; line-height: 1.6;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 28px 56px;
+}
+.wrap { max-width: 1080px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; }
+button, input, select, textarea { font: inherit; color: inherit; }
+:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+
+/* header */
+header { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 16px 32px; }
+h1 { font-family: var(--font-display); font-weight: 400; font-size: clamp(2.2rem, 7vw, 3.4rem); line-height: 1.05; margin: 0; letter-spacing: -0.01em; text-wrap: balance; }
+h1 span { color: var(--accent); }
+.tag { margin: 8px 0 0; color: var(--muted); }
+.hright { display: flex; flex-direction: column; align-items: flex-end; gap: 12px; }
+.stats { display: flex; gap: 24px; }
+.stat { display: flex; flex-direction: column; }
+.stat b { font-size: 1.5rem; font-weight: 700; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.stat small { color: var(--muted); font-size: 0.78rem; letter-spacing: 0.04em; }
+.hbtns { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+
+/* buttons */
+.btn { border: 1px solid var(--line); background: var(--surface); border-radius: 6px; padding: 9px 14px; cursor: pointer; font-weight: 500; min-height: 40px; }
+.btn:hover { border-color: var(--muted); }
+.btn[aria-pressed="true"] { background: var(--fg); color: var(--bg); border-color: var(--fg); }
+.btn.primary { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); font-weight: 700; }
+.btn.primary:hover { filter: brightness(1.06); }
+.btn.small { padding: 5px 10px; font-size: 0.85rem; min-height: 34px; }
+.btn.danger { color: var(--accent); }
+.btn:disabled { opacity: 0.5; cursor: default; }
+
+/* search hero */
+.hero { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 18px; display: flex; flex-direction: column; gap: 14px; }
+.sbox { display: flex; gap: 10px; }
+.sbox input { flex: 1 1 auto; min-width: 0; font-size: 1.2rem; padding: 14px 16px; border: 2px solid var(--fg); border-radius: 8px; background: var(--bg); }
+.sbox input:focus { border-color: var(--accent); outline: none; }
+.sbox .btn { font-size: 1.1rem; padding: 0 22px; border-radius: 8px; }
+.kwrow { display: flex; flex-direction: column; gap: 8px; }
+.kwlab { font-size: 0.85rem; color: var(--muted); font-weight: 500; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip { display: inline-flex; align-items: center; gap: 7px; border: 1px solid var(--line); background: var(--surface); padding: 6px 13px; border-radius: 999px; cursor: pointer; font-size: 0.92rem; min-height: 36px; }
+.chip[aria-pressed="true"] { background: var(--fg); color: var(--bg); border-color: var(--fg); }
+.kw { background: var(--pine-soft); border-color: transparent; color: var(--fg); font-weight: 500; }
+.kw:hover { border-color: var(--pine); }
+.dot { width: 9px; height: 9px; border-radius: 50%; background: var(--dot, var(--muted)); flex: none; }
+
+/* more filters */
+details.more { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 0; }
+details.more summary { cursor: pointer; padding: 12px 16px; font-weight: 500; }
+.more-body { padding: 0 16px 16px; display: flex; flex-direction: column; gap: 12px; }
+.toolbar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.select { padding: 9px 12px; border: 1px solid var(--line); background: var(--bg); border-radius: 6px; min-height: 40px; }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; background: var(--bg); }
+.seg button { border: 0; background: transparent; padding: 9px 12px; cursor: pointer; font-size: 0.9rem; min-height: 40px; }
+.seg button[aria-pressed="true"] { background: var(--soft); font-weight: 700; }
+.note { min-height: 1.4em; color: var(--muted); font-size: 0.85rem; margin: 0; }
+.rhead { font-size: 1.15rem; margin: 0; font-weight: 700; }
+
+/* pick */
+.pickbox { border: 2px solid var(--accent); border-radius: 8px; padding: 16px; display: flex; flex-direction: column; gap: 12px; background: var(--surface); }
+.pickbox h2 { margin: 0; font-family: var(--font-display); font-weight: 400; font-size: 1.4rem; }
+.pickbox .card { border: 0; padding: 0; background: transparent; }
+
+/* cards */
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr)); gap: 14px; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 16px 16px 14px; display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.card.want { border-style: dashed; }
+.top { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 0.8rem; color: var(--muted); }
+.cat { display: inline-flex; align-items: center; gap: 7px; font-weight: 700; color: var(--dot); letter-spacing: 0.03em; }
+.pill { border: 1px solid var(--line); border-radius: 999px; padding: 1px 9px; font-size: 0.75rem; white-space: nowrap; }
+.pill.want { border-style: dashed; color: var(--pine); border-color: var(--pine); }
+.name { font-size: 1.25rem; font-weight: 700; line-height: 1.3; margin: 0; overflow-wrap: anywhere; text-wrap: balance; }
+.meta { display: flex; flex-wrap: wrap; gap: 4px 14px; color: var(--muted); font-size: 0.88rem; align-items: center; }
+.stars { color: var(--star); letter-spacing: 2px; font-size: 1rem; }
+.price { font-variant-numeric: tabular-nums; }
+.price i { font-style: normal; opacity: 0.25; }
+.price i.on { opacity: 1; color: var(--fg); }
+.menu { margin: 0; font-size: 0.92rem; }
+.menu b { color: var(--muted); font-weight: 500; margin-right: 6px; font-size: 0.8rem; }
+.memo { margin: 0; color: var(--muted); font-size: 0.9rem; overflow-wrap: anywhere; }
+.tags { display: flex; flex-wrap: wrap; gap: 6px; }
+.tags button { border: 0; background: var(--pine-soft); color: var(--fg); border-radius: 999px; padding: 3px 10px; font-size: 0.8rem; cursor: pointer; }
+.tags button:hover { outline: 1px solid var(--pine); }
+.actions { display: flex; gap: 6px; margin-top: auto; padding-top: 6px; flex-wrap: wrap; }
+.actions a { text-decoration: none; display: inline-flex; align-items: center; color: inherit; }
+.empty { border: 1px dashed var(--line); border-radius: 6px; padding: 36px 20px; text-align: center; color: var(--muted); grid-column: 1 / -1; display: flex; flex-direction: column; gap: 14px; align-items: center; }
+
+/* dialog */
+dialog { border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--fg); padding: 0; width: min(560px, calc(100vw - 24px)); max-height: calc(100vh - 24px); overflow: auto; }
+dialog::backdrop { background: rgba(10, 14, 12, 0.55); }
+form.edit { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; padding: 22px; }
+form.edit h2 { grid-column: 1 / -1; margin: 0; font-family: var(--font-display); font-weight: 400; font-size: 1.6rem; }
+.f { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+.f.wide { grid-column: 1 / -1; }
+.f label, .f .lab { font-size: 0.82rem; color: var(--muted); }
+.f input, .f select, .f textarea { border: 1px solid var(--line); background: var(--bg); border-radius: 6px; padding: 9px 11px; width: 100%; min-width: 0; }
+.f textarea { resize: vertical; min-height: 70px; }
+.starpick { display: flex; gap: 2px; }
+.starpick button { border: 0; background: transparent; font-size: 1.7rem; line-height: 1; cursor: pointer; color: var(--line); padding: 2px; }
+.starpick button.on { color: var(--star); }
+.foot { grid-column: 1 / -1; display: flex; justify-content: flex-end; gap: 8px; flex-wrap: wrap; }
+.err { grid-column: 1 / -1; color: var(--accent); margin: 0; font-size: 0.88rem; min-height: 1.2em; }
+@media (max-width: 520px) {
+  form.edit { grid-template-columns: 1fr; padding: 18px; }
+  .stats { gap: 18px; }
+  .hright { align-items: flex-start; }
+  .hbtns { justify-content: flex-start; }
+  .sbox .btn { padding: 0 16px; }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; scroll-behavior: auto !important; } }
+body { margin: 0; }
+[hidden] { display: none !important; }
+</style>
+
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>나의 <span>맛집</span> 도감</h1>
+      <p class="tag">키워드 하나만 적으세요. 어울리는 맛집이 바로 나옵니다.</p>
+    </div>
+    <div class="hright">
+      <div class="stats" aria-label="요약">
+        <div class="stat"><b id="s-total">0</b><small>등록한 곳</small></div>
+        <div class="stat"><b id="s-avg">-</b><small>평균 별점</small></div>
+        <div class="stat"><b id="s-want">0</b><small>가 보고 싶은 곳</small></div>
+      </div>
+      <div class="hbtns">
+        <button id="big" class="btn" type="button" aria-pressed="false">쉬운 화면으로 보기</button>
+        <button id="add" class="btn primary" type="button" hidden>+ 맛집 추가</button>
+      </div>
+    </div>
+  </header>
+
+  <section class="hero" aria-label="맛집 찾기">
+    <div class="quick">
+      <div class="qrow"><span class="qlab" id="qlab1">누구와 드세요?</span><div class="chips" id="q-who" role="group" aria-labelledby="qlab1"></div></div>
+      <div class="qrow"><span class="qlab" id="qlab2">어떤 음식이 좋으세요?</span><div class="chips" id="q-food" role="group" aria-labelledby="qlab2"></div></div>
+    </div>
+    <form id="sform" role="search">
+      <div class="sbox">
+        <input id="q" type="search" placeholder="예) 데이트, 국밥, 조용한, 부모님" aria-label="맛집 키워드 검색" autocomplete="off" enterkeyhint="search">
+        <button class="btn primary" type="submit">찾기</button>
+      </div>
+    </form>
+    <div class="kwrow">
+      <span class="kwlab" id="kwlab">추천 키워드</span>
+      <div class="chips" id="kws" role="group" aria-labelledby="kwlab"></div>
+    </div>
+    <div class="brow">
+      <button id="mic" class="btn" type="button" hidden>말로 찾기</button>
+      <button id="rand" class="btn" type="button">고민될 땐 하나 골라주기</button>
+    </div>
+  </section>
+
+  <div id="pick"></div>
+
+  <details class="more">
+    <summary>조건으로 더 골라보기</summary>
+    <div class="more-body">
+      <div class="chips" id="cats" role="group" aria-label="음식 종류"></div>
+      <div class="toolbar">
+        <select id="sort" class="select" aria-label="정렬">
+          <option value="rating">추천·별점 높은 순</option>
+          <option value="recent">최근 등록 순</option>
+          <option value="name">이름 가나다 순</option>
+        </select>
+        <div class="seg" id="status" role="group" aria-label="방문 상태">
+          <button type="button" data-v="전체" aria-pressed="true">전체</button>
+          <button type="button" data-v="다녀옴" aria-pressed="false">다녀온 곳</button>
+          <button type="button" data-v="가보고싶음" aria-pressed="false">가고 싶은 곳</button>
+        </div>
+      </div>
+    </div>
+  </details>
+
+  <p class="note" id="note" role="status" aria-live="polite"></p>
+  <h2 class="rhead" id="rhead" aria-live="polite"></h2>
+  <main class="grid" id="grid"></main>
+</div>
+
+<dialog id="dlg">
+  <form id="form" class="edit" autocomplete="off">
+    <h2 id="dlg-title">맛집 추가</h2>
+    <div class="f wide"><label for="f-name">가게 이름</label><input id="f-name" required maxlength="60" placeholder="예: 할매국밥집"></div>
+    <div class="f"><label for="f-cat">음식 종류</label><select id="f-cat"></select></div>
+    <div class="f"><label for="f-area">동네</label><input id="f-area" maxlength="40" placeholder="예: 성수동"></div>
+    <div class="f"><label for="f-price">가격대 (1인)</label>
+      <select id="f-price">
+        <option value="1">₩ 1만 원 이하</option>
+        <option value="2" selected>₩₩ 1~3만 원</option>
+        <option value="3">₩₩₩ 3만 원 이상</option>
+      </select></div>
+    <div class="f"><label for="f-status">상태</label>
+      <select id="f-status"><option value="다녀옴">다녀왔어요</option><option value="가보고싶음">가 보고 싶어요</option></select></div>
+    <div class="f wide"><span class="lab" id="rate-lab">별점</span><div class="starpick" id="stars" role="group" aria-labelledby="rate-lab"></div></div>
+    <div class="f wide"><label for="f-menu">대표 메뉴</label><input id="f-menu" maxlength="60" placeholder="예: 돼지국밥, 순대모둠"></div>
+    <div class="f wide"><label for="f-phone">전화번호</label><input id="f-phone" type="tel" maxlength="20" placeholder="예: 02-1234-5678"></div>
+    <div class="f wide"><label for="f-tags">검색 키워드 (쉼표로 구분)</label><input id="f-tags" maxlength="120" placeholder="예: 데이트, 조용한, 주차, 혼밥, 부모님"></div>
+    <div class="f wide"><label for="f-memo">메모</label><textarea id="f-memo" maxlength="300" placeholder="웨이팅, 팁, 같이 갔던 사람 등"></textarea></div>
+    <p class="err" id="err" role="alert"></p>
+    <div class="foot">
+      <button type="button" class="btn" id="cancel">닫기</button>
+      <button type="submit" class="btn primary" id="save">저장</button>
+    </div>
+  </form>
+</dialog>
+
+<script>
+(function () {
+  var CATS = ['한식', '일식', '중식', '양식', '분식', '카페·디저트', '술집', '기타'];
+  /* 비슷한 말: 키워드 하나로도 관련 맛집과 관련 키워드가 함께 나오게 합니다 */
+  var SYN = {
+    '데이트': ['커플', '분위기', '기념일', '조용한', '야경', '감성'],
+    '커플': ['데이트', '분위기', '기념일'],
+    '기념일': ['데이트', '분위기', '코스'],
+    '분위기': ['데이트', '조용한', '감성'],
+    '부모님': ['어르신', '효도', '한정식', '편한 좌석', '상견례'],
+    '어르신': ['부모님', '효도', '편한 좌석', '담백한'],
+    '효도': ['부모님', '어르신', '한정식'],
+    '혼밥': ['혼자', '1인', '가성비'],
+    '해장': ['국밥', '국물', '얼큰한'],
+    '국밥': ['해장', '국물', '든든한'],
+    '국물': ['해장', '국밥', '칼국수'],
+    '가성비': ['저렴한', '푸짐한', '혼밥'],
+    '디저트': ['카페', '달콤한', '케이크'],
+    '카페': ['디저트', '커피', '조용한'],
+    '커피': ['카페', '디저트'],
+    '매운': ['얼큰한', '매콤한', '마라'],
+    '매운맛': ['얼큰한', '매콤한', '마라'],
+    '면': ['국수', '칼국수', '소바', '우동', '냉면'],
+    '고기': ['삼겹살', '구이', '회식'],
+    '술': ['회식', '안주', '와인']
+  };
+  var items = [], coll = null, canEdit = true, loaded = false;
+  var view = { q: '', cat: '전체', sort: 'rating', status: '전체' };
+  var editId = null, rating = 4, delArm = null, pickId = null;
+
+  var $ = function (id) { return document.getElementById(id); };
+  function el(tag, cls, text) { var e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
+  function dotColor(cat) { var i = CATS.indexOf(cat); return 'var(--c' + ((i < 0 ? 7 : i) + 1) + ')'; }
+  function stars(n) { return '★★★★★'.slice(0, n) + '☆☆☆☆☆'.slice(0, 5 - n); }
+  function note(t) { $('note').textContent = t || ''; }
+  var quick = { who: '', food: '' };
+  var WHO = [['혼자 먹어요', '혼밥'], ['부모님과 함께', '부모님'], ['연인과 함께', '데이트'], ['친구·가족 모임', '회식']];
+  var FOOD = [['국물 있는 음식', '국물'], ['면 요리', '면'], ['고기', '고기'], ['한정식', '한정식'], ['담백한 음식', '담백한'], ['디저트·차', '디저트']];
+  function fillQuick(id, arr, key) {
+    var box = $(id); box.textContent = '';
+    arr.forEach(function (p) {
+      var b = el('button', 'chip qbtn', p[0]); b.type = 'button';
+      b.setAttribute('aria-pressed', String(quick[key] === p[1]));
+      b.onclick = function () { quick[key] = quick[key] === p[1] ? '' : p[1]; applyQuick(); };
+      box.appendChild(b);
+    });
+  }
+  function buildQuick() { fillQuick('q-who', WHO, 'who'); fillQuick('q-food', FOOD, 'food'); }
+  function applyQuick() {
+    var q = [quick.who, quick.food].filter(Boolean).join(' ');
+    view.q = q; $('q').value = q; pickId = null; buildQuick(); render();
+  }
+  function setQuery(q) { quick = { who: '', food: '' }; buildQuick(); view.q = q; $('q').value = q; pickId = null; render(); }
+
+  /* 글씨 크기 (이 기기에만 기억) */
+  function applyBig(on) {
+    document.documentElement.classList.toggle('easy', on);
+    $('big').setAttribute('aria-pressed', String(on));
+    $('big').textContent = on ? '원래 화면으로 보기' : '쉬운 화면으로 보기';
+  }
+  var bigOn = false;
+  try { bigOn = localStorage.getItem('matjip-big') === '1'; } catch (e) {}
+  applyBig(bigOn);
+  $('big').onclick = function () {
+    bigOn = !bigOn; applyBig(bigOn);
+    try { localStorage.setItem('matjip-big', bigOn ? '1' : '0'); } catch (e) {}
+  };
+
+  /* 검색 */
+  function tokens() { return view.q.trim().toLowerCase().split(/[\s,]+/).filter(Boolean); }
+  function hay(it) { return [it.name, it.area, it.menu, it.memo, it.category].concat(it.tags || []).join(' ').toLowerCase(); }
+  function score(it, toks) {
+    if (!toks.length) return 0;
+    var h = hay(it), s = 0;
+    for (var i = 0; i < toks.length; i++) {
+      var t = toks[i];
+      var direct = h.indexOf(t) >= 0;
+      var syn = (SYN[t] || []).some(function (x) { return h.indexOf(x.toLowerCase()) >= 0; });
+      if (!direct && !syn) return -1;
+      s += direct ? 3 : 1;
+    }
+    return s;
+  }
+  function visible() {
+    var toks = tokens();
+    var list = [];
+    items.forEach(function (it) {
+      if (view.cat !== '전체' && it.category !== view.cat) return;
+      if (view.status !== '전체' && it.status !== view.status) return;
+      var s = score(it, toks);
+      if (s < 0) return;
+      list.push({ it: it, s: s });
+    });
+    list.sort(function (a, b) {
+      if (view.sort === 'name') return String(a.it.name).localeCompare(String(b.it.name), 'ko');
+      if (view.sort === 'recent') return (b.it.createdAt || 0) - (a.it.createdAt || 0);
+      return (b.s - a.s) || ((b.it.rating || 0) - (a.it.rating || 0)) || String(a.it.name).localeCompare(String(b.it.name), 'ko');
+    });
+    return list.map(function (x) { return x.it; });
+  }
+  function topKeys(cnt, exclude, n) {
+    return Object.keys(cnt).filter(function (k) { return exclude.indexOf(k.toLowerCase()) < 0; })
+      .sort(function (a, b) { return cnt[b] - cnt[a] || a.localeCompare(b, 'ko'); }).slice(0, n);
+  }
+  function keywordList(list, toks) {
+    var cnt = {};
+    if (toks.length) {
+      list.forEach(function (it) { (it.tags || []).concat([it.category, it.area].filter(Boolean)).forEach(function (k) { cnt[k] = (cnt[k] || 0) + 1; }); });
+      toks.forEach(function (t) { (SYN[t] || []).forEach(function (s) { cnt[s] = (cnt[s] || 0) + 2; }); });
+      return topKeys(cnt, toks, 9);
+    }
+    items.forEach(function (it) { (it.tags || []).forEach(function (k) { cnt[k] = (cnt[k] || 0) + 1; }); });
+    return topKeys(cnt, [], 12);
+  }
+
+  function buildCats() {
+    var box = $('cats'); box.textContent = '';
+    ['전체'].concat(CATS).forEach(function (c) {
+      var b = el('button', 'chip'); b.type = 'button';
+      b.setAttribute('aria-pressed', String(view.cat === c));
+      if (c !== '전체') { var d = el('span', 'dot'); d.style.setProperty('--dot', dotColor(c)); b.appendChild(d); }
+      b.appendChild(document.createTextNode(c));
+      b.onclick = function () { view.cat = c; buildCats(); render(); };
+      box.appendChild(b);
+    });
+  }
+  CATS.forEach(function (c) { var o = el('option', '', c); o.value = c; $('f-cat').appendChild(o); });
+
+  function card(it) {
+    var c = el('article', 'card' + (it.status === '가보고싶음' ? ' want' : ''));
+    var top = el('div', 'top');
+    var cat = el('span', 'cat'); cat.style.setProperty('--dot', dotColor(it.category));
+    var d = el('span', 'dot'); d.style.setProperty('--dot', dotColor(it.category));
+    cat.appendChild(d); cat.appendChild(document.createTextNode(it.category || '기타'));
+    var right = el('span');
+    if (it.sample) { right.appendChild(el('span', 'pill', '예시')); right.appendChild(document.createTextNode(' ')); }
+    right.appendChild(el('span', 'pill' + (it.status === '가보고싶음' ? ' want' : ''), it.status === '가보고싶음' ? '가 보고 싶어요' : '다녀왔어요'));
+    top.appendChild(cat); top.appendChild(right);
+    c.appendChild(top);
+    c.appendChild(el('h3', 'name', it.name));
+
+    var meta = el('div', 'meta');
+    if (it.status !== '가보고싶음' || it.rating) { var s = el('span', 'stars', stars(it.rating || 0)); s.setAttribute('aria-label', '별점 ' + (it.rating || 0) + '점'); meta.appendChild(s); }
+    if (it.area) meta.appendChild(el('span', '', it.area));
+    var p = el('span', 'price'); p.setAttribute('aria-label', '가격대 ' + it.price + '단계');
+    for (var i = 1; i <= 3; i++) p.appendChild(el('i', i <= it.price ? 'on' : '', '₩'));
+    meta.appendChild(p);
+    c.appendChild(meta);
+
+    if (it.menu) { var m = el('p', 'menu'); m.appendChild(el('b', '', '대표 메뉴')); m.appendChild(document.createTextNode(it.menu)); c.appendChild(m); }
+    if (it.memo) c.appendChild(el('p', 'memo', it.memo));
+    if (it.phone) {
+      var ph = el('p', 'phone'); ph.appendChild(document.createTextNode('전화 '));
+      var pa = el('a', '', it.phone); pa.href = 'tel:' + it.phone.replace(/[^0-9+]/g, ''); pa.style.color = 'inherit';
+      ph.appendChild(pa); c.appendChild(ph);
+    }
+    if (it.tags && it.tags.length) {
+      var tg = el('div', 'tags');
+      it.tags.slice(0, 6).forEach(function (k) { var b = el('button', '', '#' + k); b.type = 'button'; b.onclick = function () { setQuery(k); window.scrollTo({ top: 0, behavior: 'smooth' }); }; tg.appendChild(b); });
+      c.appendChild(tg);
+    }
+
+    var act = el('div', 'actions');
+    var a = el('a', 'btn small', '지도에서 보기');
+    a.href = 'https://map.naver.com/p/search/' + encodeURIComponent((it.area ? it.area + ' ' : '') + it.name);
+    a.target = '_blank'; a.rel = 'noopener noreferrer';
+    act.appendChild(a);
+    if (canEdit) {
+      var e = el('button', 'btn small', '수정'); e.type = 'button'; e.onclick = function () { openForm(it); };
+      var x = el('button', 'btn small danger', delArm === it.id ? '정말 삭제할까요?' : '삭제'); x.type = 'button';
+      x.onclick = function () {
+        if (delArm === it.id) { delArm = null; remove(it.id); }
+        else { delArm = it.id; render(); setTimeout(function () { if (delArm === it.id) { delArm = null; render(); } }, 4000); }
+      };
+      act.appendChild(e); act.appendChild(x);
+    }
+    c.appendChild(act);
+    return c;
+  }
+
+  function renderPick() {
+    var box = $('pick'); box.textContent = '';
+    var it = items.filter(function (x) { return x.id === pickId; })[0];
+    if (!it) return;
+    var w = el('section', 'pickbox'); w.setAttribute('aria-label', '오늘의 추천');
+    w.appendChild(el('h2', '', '오늘은 여기 어때요?'));
+    w.appendChild(card(it));
+    var row = el('div', 'hbtns');
+    var again = el('button', 'btn primary', '다시 골라주기'); again.type = 'button'; again.onclick = pickOne;
+    var close = el('button', 'btn', '닫기'); close.type = 'button'; close.onclick = function () { pickId = null; render(); };
+    row.appendChild(again); row.appendChild(close);
+    w.appendChild(row);
+    box.appendChild(w);
+  }
+  function pickOne() {
+    var list = visible();
+    if (!list.length) { note('고를 맛집이 없어요. 키워드를 바꿔 보세요.'); return; }
+    var pool = list.length > 1 ? list.filter(function (x) { return x.id !== pickId; }) : list;
+    pickId = pool[Math.floor(Math.random() * pool.length)].id;
+    render();
+    $('pick').scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+
+  function render() {
+    var total = items.length;
+    var rated = items.filter(function (i) { return i.status !== '가보고싶음' && i.rating; });
+    $('s-total').textContent = total;
+    $('s-avg').textContent = rated.length ? (rated.reduce(function (a, i) { return a + i.rating; }, 0) / rated.length).toFixed(1) : '-';
+    $('s-want').textContent = items.filter(function (i) { return i.status === '가보고싶음'; }).length;
+    $('add').hidden = !canEdit;
+
+    var toks = tokens();
+    var list = loaded ? visible() : [];
+
+    /* 키워드 칩 */
+    var kws = $('kws'); kws.textContent = '';
+    var keys = loaded ? keywordList(list, toks) : [];
+    $('kwlab').textContent = toks.length ? '‘' + view.q.trim() + '’와 함께 찾는 키워드' : '추천 키워드';
+    keys.forEach(function (k) {
+      var b = el('button', 'chip kw', k); b.type = 'button';
+      b.onclick = function () { setQuery(k); };
+      kws.appendChild(b);
+    });
+    if (toks.length) {
+      var clr = el('button', 'chip', '처음부터 다시'); clr.type = 'button';
+      clr.onclick = function () { setQuery(''); };
+      kws.appendChild(clr);
+    }
+
+    renderPick();
+
+    $('rhead').textContent = !loaded ? '' : (toks.length ? '‘' + view.q.trim() + '’ 맛집 ' + list.length + '곳' : '전체 맛집 ' + list.length + '곳');
+    var grid = $('grid'); grid.textContent = '';
+    if (!loaded) { grid.appendChild(el('div', 'empty', '맛집을 불러오는 중이에요…')); return; }
+    if (!list.length) {
+      var em = el('div', 'empty');
+      if (!total) {
+        em.appendChild(el('div', '', '아직 등록한 맛집이 없어요.'));
+        if (canEdit) { var b = el('button', 'btn primary', '첫 맛집 추가하기'); b.type = 'button'; b.onclick = function () { openForm(null); }; em.appendChild(b); }
+      } else {
+        em.appendChild(el('div', '', '‘' + view.q.trim() + '’에 맞는 맛집이 아직 없어요. 위의 추천 키워드를 눌러 보세요.'));
+        var r = el('button', 'btn', '전체 맛집 보기'); r.type = 'button'; r.onclick = function () { view.cat = '전체'; view.status = '전체'; buildCats(); Array.prototype.forEach.call($('status').children, function (x) { x.setAttribute('aria-pressed', String(x.getAttribute('data-v') === '전체')); }); setQuery(''); };
+        em.appendChild(r);
+      }
+      grid.appendChild(em); return;
+    }
+    list.forEach(function (it) { grid.appendChild(card(it)); });
+  }
+
+  /* 별점 입력 */
+  function buildStars() {
+    var box = $('stars'); box.textContent = '';
+    for (var i = 1; i <= 5; i++) (function (n) {
+      var b = el('button', n <= rating ? 'on' : '', '★'); b.type = 'button'; b.setAttribute('aria-label', n + '점');
+      b.setAttribute('aria-pressed', String(n === rating));
+      b.onclick = function () { rating = n; buildStars(); };
+      box.appendChild(b);
+    })(i);
+  }
+
+  function openForm(it) {
+    editId = it ? it.id : null;
+    $('dlg-title').textContent = it ? '맛집 수정' : '맛집 추가';
+    $('f-name').value = it ? it.name : '';
+    $('f-cat').value = it ? it.category : CATS[0];
+    $('f-area').value = it ? (it.area || '') : '';
+    $('f-price').value = String(it ? it.price : 2);
+    $('f-status').value = it ? it.status : '다녀옴';
+    $('f-menu').value = it ? (it.menu || '') : '';
+    $('f-tags').value = it && it.tags ? it.tags.join(', ') : '';
+    $('f-phone').value = it ? (it.phone || '') : '';
+    $('f-memo').value = it ? (it.memo || '') : '';
+    rating = it ? (it.rating || 4) : 4; buildStars();
+    $('err').textContent = ''; $('save').disabled = false;
+    $('dlg').showModal();
+  }
+
+  async function writeDoc(id, data) {
+    if (coll) { await (id ? coll.doc(id) : coll.doc()).set(data); return; }
+    if (id) items = items.map(function (x) { return x.id === id ? Object.assign({ id: id }, data) : x; });
+    else items.push(Object.assign({ id: 'l' + Date.now() }, data));
+    persist();
+    render();
+  }
+  async function remove(id) {
+    try { if (coll) await coll.doc(id).delete(); else { items = items.filter(function (x) { return x.id !== id; }); persist(); render(); } }
+    catch (e) { note('삭제하지 못했어요. 잠시 뒤에 다시 시도해 주세요.'); render(); }
+  }
+
+  $('form').addEventListener('submit', async function (ev) {
+    ev.preventDefault();
+    var name = $('f-name').value.trim();
+    if (!name) { $('err').textContent = '가게 이름을 입력해 주세요.'; return; }
+    var prev = items.filter(function (x) { return x.id === editId; })[0];
+    var tags = $('f-tags').value.split(/[,，]/).map(function (s) { return s.trim().replace(/^#/, ''); }).filter(Boolean).slice(0, 12);
+    var data = {
+      name: name, category: $('f-cat').value, area: $('f-area').value.trim(),
+      price: Number($('f-price').value), status: $('f-status').value, rating: rating,
+      menu: $('f-menu').value.trim(), memo: $('f-memo').value.trim(), tags: tags, phone: $('f-phone').value.trim(),
+      sample: false, createdAt: prev && prev.createdAt ? prev.createdAt : Date.now()
+    };
+    $('save').disabled = true;
+    try { await writeDoc(editId, data); $('dlg').close(); }
+    catch (e) { $('err').textContent = '저장하지 못했어요. 편집 권한이 있는지 확인하고 다시 시도해 주세요.'; $('save').disabled = false; }
+  });
+  $('cancel').onclick = function () { $('dlg').close(); };
+  $('add').onclick = function () { openForm(null); };
+  $('rand').onclick = pickOne;
+  $('sform').addEventListener('submit', function (e) { e.preventDefault(); $('q').blur(); $('rhead').scrollIntoView({ behavior: 'smooth', block: 'start' }); });
+  $('q').addEventListener('input', function (e) { quick = { who: '', food: '' }; buildQuick(); view.q = e.target.value; pickId = null; render(); });
+  $('sort').addEventListener('change', function (e) { view.sort = e.target.value; render(); });
+  $('status').addEventListener('click', function (e) {
+    var b = e.target.closest('button'); if (!b) return;
+    view.status = b.getAttribute('data-v');
+    Array.prototype.forEach.call($('status').children, function (x) { x.setAttribute('aria-pressed', String(x === b)); });
+    render();
+  });
+
+  buildCats(); buildQuick(); render();
+
+  /* 말로 찾기: 이 브라우저에서 음성 입력을 쓸 수 있을 때만 버튼이 보입니다 */
+  var JOSA = ['이랑', '랑', '과', '와', '에서', '으로', '로', '을', '를', '이', '가', '은', '는', '에', '도'];
+  function known(w) {
+    if (SYN[w]) return true;
+    return items.some(function (it) { return hay(it).indexOf(w) >= 0; });
+  }
+  function cleanSpoken(text) {
+    var words = text.replace(/[.,!?~]/g, ' ').toLowerCase().split(/\s+/).filter(Boolean);
+    var out = [];
+    words.forEach(function (w) {
+      if (known(w)) { out.push(w); return; }
+      for (var i = 0; i < JOSA.length; i++) {
+        var s = JOSA[i];
+        if (w.length > s.length + 1 && w.slice(-s.length) === s && known(w.slice(0, -s.length))) { out.push(w.slice(0, -s.length)); return; }
+      }
+    });
+    return out.length ? out.join(' ') : text.replace(/[.,!?~]/g, ' ').trim();
+  }
+  (async function () {
+    var d = null;
+    try { d = await window.claude.use('dictation'); } catch (e) {}
+    if (!d) return;
+    var mic = $('mic'), spoken = '';
+    mic.hidden = false;
+    d.onFinal(function (e) { spoken = (spoken + ' ' + e.text).trim(); setQuery(cleanSpoken(spoken)); });
+    d.onState(function (e) {
+      var on = e.state !== 'idle';
+      mic.textContent = on ? '듣는 중이에요. 다 말하면 눌러 주세요' : '말로 찾기';
+      mic.setAttribute('aria-pressed', String(on));
+    });
+    mic.onclick = function () {
+      if (d.active()) { d.stop().catch(function () {}); return; }
+      spoken = '';
+      d.start().catch(function (err) {
+        var c = err && err.code;
+        if (c === 'stopped' || c === 'dismissed') return;
+        note(c === 'not_granted' ? '마이크를 쓸 수 없어요. 글자로 입력해 주세요.' : '음성 입력을 시작하지 못했어요. 글자로 입력해 주세요.');
+      });
+    };
+  })();
+
+  /* 이 기기(브라우저)에 저장합니다. 저장할 수 없는 환경이면 새로고침 전까지만 보관합니다 */
+  var KEY = 'matjip-items-v1';
+  var SEED = [{"id": "ex1", "name": "할매국밥집", "category": "한식", "area": "성수동", "price": 1, "status": "다녀옴", "rating": 5, "menu": "돼지국밥, 순대모둠", "memo": "점심시간엔 웨이팅 20분 정도. 깍두기가 맛있어요.", "tags": ["국밥", "해장", "혼밥", "가성비", "부모님", "든든한"], "phone": "", "sample": true, "createdAt": 1763870000001}, {"id": "ex2", "name": "소바 하나", "category": "일식", "area": "합정동", "price": 2, "status": "다녀옴", "rating": 4, "menu": "냉소바, 튀김 세트", "memo": "여름에 특히 좋아요. 메밀 면이 쫄깃해요.", "tags": ["소바", "냉면", "여름", "조용한", "혼밥"], "phone": "", "sample": true, "createdAt": 1763870000002}, {"id": "ex3", "name": "화덕 한 판", "category": "양식", "area": "연남동", "price": 3, "status": "가보고싶음", "rating": 0, "menu": "마르게리타 피자", "memo": "친구가 추천해 준 곳. 기념일에 가 보기.", "tags": ["피자", "데이트", "기념일", "분위기", "와인"], "phone": "", "sample": true, "createdAt": 1763870000003}, {"id": "ex4", "name": "떡볶이 삼거리", "category": "분식", "area": "망원동", "price": 1, "status": "다녀옴", "rating": 4, "menu": "쌀떡볶이, 김말이", "memo": "학교 끝나고 가던 곳 느낌. 포장도 가능.", "tags": ["떡볶이", "분식", "가성비", "포장", "추억"], "phone": "", "sample": true, "createdAt": 1763870000004}, {"id": "ex5", "name": "산책 로스터스", "category": "카페·디저트", "area": "서촌", "price": 2, "status": "다녀옴", "rating": 5, "menu": "필터커피, 당근케이크", "memo": "창가 자리가 좋아요. 평일 오후가 한가해요.", "tags": ["커피", "디저트", "데이트", "조용한", "감성", "창가"], "phone": "", "sample": true, "createdAt": 1763870000005}, {"id": "ex6", "name": "오래뜰 한정식", "category": "한식", "area": "북촌", "price": 3, "status": "다녀옴", "rating": 5, "menu": "정갈한 한정식 코스", "memo": "좌식이 아닌 테이블석이라 무릎이 불편한 분도 편해요.", "tags": ["한정식", "부모님", "어르신", "효도", "상견례", "조용한", "편한 좌석", "주차"], "phone": "", "sample": true, "createdAt": 1763870000006}, {"id": "ex7", "name": "노을 파스타", "category": "양식", "area": "한강진", "price": 2, "status": "다녀옴", "rating": 4, "menu": "봉골레, 트러플 크림 파스타", "memo": "저녁 창가 자리가 인기라서 예약을 추천해요.", "tags": ["파스타", "데이트", "야경", "분위기", "와인", "예약"], "phone": "", "sample": true, "createdAt": 1763870000007}, {"id": "ex8", "name": "마라 한 접시", "category": "중식", "area": "건대입구", "price": 1, "status": "다녀옴", "rating": 4, "menu": "마라탕, 꿔바로우", "memo": "맵기 단계를 고를 수 있어요. 혼자 가도 부담 없어요.", "tags": ["마라", "매운", "혼밥", "가성비", "얼큰한"], "phone": "", "sample": true, "createdAt": 1763870000008}, {"id": "ex9", "name": "마루 손칼국수", "category": "한식", "area": "종로", "price": 1, "status": "다녀옴", "rating": 4, "menu": "바지락 칼국수, 보리밥", "memo": "국물이 담백해서 어르신들이 좋아하세요.", "tags": ["칼국수", "면", "국물", "든든한", "부모님", "어르신", "가성비", "담백한"], "phone": "", "sample": true, "createdAt": 1763870000009}, {"id": "ex10", "name": "달빛 디저트바", "category": "카페·디저트", "area": "이태원", "price": 2, "status": "다녀옴", "rating": 5, "menu": "수제 케이크, 아포가토", "memo": "밤 11시까지 열어서 저녁 먹고 오기 좋아요.", "tags": ["디저트", "데이트", "야경", "분위기", "케이크", "늦게까지"], "phone": "", "sample": true, "createdAt": 1763870000010}, {"id": "ex11", "name": "불향 삼겹", "category": "한식", "area": "마포", "price": 2, "status": "다녀옴", "rating": 4, "menu": "숯불 삼겹살, 된장찌개", "memo": "직원이 직접 구워 줘서 편해요. 회식하기 좋아요.", "tags": ["삼겹살", "고기", "회식", "술", "든든한"], "phone": "", "sample": true, "createdAt": 1763870000011}, {"id": "ex12", "name": "우동 한 그릇", "category": "일식", "area": "신촌", "price": 1, "status": "가보고싶음", "rating": 0, "menu": "가케우동, 유부초밥", "memo": "국물이 맑다는 후기를 봤어요.", "tags": ["우동", "면", "국물", "혼밥", "가성비"], "phone": "", "sample": true, "createdAt": 1763870000012}];
+  function persist() {
+    try { localStorage.setItem(KEY, JSON.stringify(items)); }
+    catch (e) { note('이 브라우저에서는 저장할 수 없어서 새로고침하면 사라져요.'); }
+  }
+  try {
+    var raw = localStorage.getItem(KEY);
+    items = raw ? JSON.parse(raw) : SEED.slice();
+    if (!raw) persist();
+  } catch (e) { items = SEED.slice(); }
+  loaded = true; render();
+})();
+</script>
+</body>
+</html>
